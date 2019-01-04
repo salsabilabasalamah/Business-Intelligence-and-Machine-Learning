@@ -1,0 +1,70 @@
+#Web scraping
+# Parsing of HTML/XML files 
+library(rvest)
+
+#search for Garuda Indonesia pages on tripadvisor
+url<-read_html("https://www.tripadvisor.com/Airline_Review-d8729079-Reviews-Cheap-Flights-Garuda-Indonesia#REVIEWS")
+
+#find the the lnumber of the last page listed in the bottom of the main page
+npages<-url%>%
+  html_nodes(" .pageNum")%>%  
+  html_attr(name="data-page-number")%>%  
+  tail(.,1)%>%
+  as.numeric()  
+npages
+
+a<-0:(npages-1)
+a
+b<-10 #because each page contains 10 reviews
+b
+res<-numeric(length = length(a)) #yg di ambil banyaknya halaman di a
+res
+
+# starting from page i until a
+for (i in seq_along(a)) {
+  res[i]<-a[i]*b  
+}
+tableout<-data.frame() #prepare data frame for tableout
+
+for (i in res) {
+  cat(".")
+  
+  url<-paste("https://www.tripadvisor.com/Airline_Review-d8729079-Reviews-Cheap-Flights-or",i,"Garuda-Indonesia#REVIEWS",sep = "")
+  
+  reviews<-url%>%
+    html()%>%
+    html_nodes("#REVIEWS .innerBubble")
+  
+  id<-reviews%>%
+    html_node(".quote a")%>%
+    html_attr("id")
+  
+  quote<-reviews%>%
+    html_node(".quote span")%>%
+    html_text()
+  
+  rating<-reviews%>%
+    html_node(".rating .ui_bubble_rating")%>%
+    html_attrs()%>%
+    gsub("ui_bubble_rating bubble_","", .)%>%
+    as.integer() / 10
+  
+  date<-reviews%>%
+    html_node(".innerBubble, .ratingDate")%>%
+    html_text()
+  
+  review<-reviews%>%
+    html_node(".entry .partial_entry")%>%
+    html_text()
+  
+  flights<-reviews%>%
+    html_node(".categoryLabel")%>%
+    html_text()
+  
+  reviewnospace<-gsub("\n","",review)
+  temp.tableout<-data.frame(id,quote,rating,date,reviewnospace,flights)
+  tableout<-rbind(tableout,temp.tableout)
+}
+View(tableout)
+write.csv(tableout,"E://BIML//Garuda Indonesia.csv")
+save.image()
